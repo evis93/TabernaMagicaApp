@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "A Taberna Mágica",
+    "slug": "taverna-magica",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#E87722",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tavernamagica.app"
+    },
+    "android": {
+      "backgroundColor": "#E87722",
+      "package": "com.tavernamagica.app"
+    },
+    "web": {
+      "favicon": "./assets/images/logo.png"
+    }
+  }
+}
