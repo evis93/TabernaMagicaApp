@@ -1,134 +1,333 @@
+// models/ProductModel_Supabase.js
 // models/ProductModel.js
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const STORAGE_KEY = '@taverna_products';
+import { supabase } from '../config/supabase';
+import SyncService from '../services/SyncService';
 
 class ProductModel {
-  constructor() {
-    this.products = [];
-  }
-
-  generateId() {
-    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-  }
-
-  async loadProducts() {
-    try {
-      const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
-      this.products = jsonValue != null ? JSON.parse(jsonValue) : [];
-      return this.products;
-    } catch (e) {
-      console.error('Error loading products:', e);
-      return [];
-    }
-  }
-
-  async saveProducts() {
-    try {
-      const jsonValue = JSON.stringify(this.products);
-      await AsyncStorage.setItem(STORAGE_KEY, jsonValue);
-      return true;
-    } catch (e) {
-      console.error('Error saving products:', e);
-      return false;
-    }
-  }
-
+  
+  // ==================== OBTENER PRODUCTOS ====================
+  
   async getAll() {
-    return await this.loadProducts();
+    try {
+      console.log('📡 ProductModel.getAll()');
+      
+      // Intentar sincronizar
+      const result = await SyncService.syncProducts();
+      
+      return result.data;
+    } catch (error) {
+      console.error('Error al obtener productos:', error);
+      // Si falla todo, devolver caché
+      return await SyncService.getFromCache('@products_cache') || [];
+    }
   }
 
-  async getById(id) {
-    await this.loadProducts();
-    return this.products.find(product => product.id === id);
+  // ==================== OBTENER POR ID ====================
+  
+  async getById(id_menu) {
+    try {
+      // Primero intentar de caché
+      const cachedProducts = await SyncService.getFromCache('@products_cache');
+      if (cachedProducts) {
+        const product = cachedProducts.find(p => p.id === id_menu.toString());
+        if (product) return product;
+      }
+
+      // Si no está en caché, buscar online
+      const { data, error } = await supabase
+        .from('menu')
+        .select(`
+          id_menu,
+          precio,
+          disponibilidad,
+          updated_at,
+          productos (
+            id_producto,
+            nombre,
+            descripcion,
+            created_at,
+            tipo_producto (
+              id_tipo,
+              descripcion
+            )
+          )
+        `)
+        .eq('id_menu', id_menu)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id_menu.toString(),
+        id_producto: data.productos.id_producto,
+        name: data.productos.nombre,
+        description: data.productos.descripcion || '',
+        price: parseFloat(data.precio),
+        category: data.productos.tipo_producto.descripcion,
+        id_tipo: data.productos.tipo_producto.id_tipo,
+        available: data.disponibilidad,
+        stock: 0,
+        createdAt: data.productos.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error) {
+      console.error('Error al obtener producto:', error);
+      return null;
+    }
   }
 
+  // ==================== CREAR PRODUCTO ====================
+  
   async create(productData) {
-    await this.loadProducts();
-    
-    const newProduct = {
-      id: this.generateId(),
-      name: productData.name,
-      description: productData.description || '',
-      price: parseFloat(productData.price),
-      category: productData.category || 'General',
-      stock: parseInt(productData.stock) || 0,
-      available: productData.available !== false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const isOnline = await SyncService.isOnline();
 
-    this.products.push(newProduct);
-    await this.saveProducts();
-    return newProduct;
-  }
+    if (!isOnline) {
+      console.log('📴 Sin conexión, guardando operación pendiente');
+      
+      // Agregar a operaciones pendientes
+      await SyncService.addPendingOperation({
+        type: 'create',
+        data: productData
+      });
 
-  async update(id, productData) {
-    await this.loadProducts();
-    
-    const index = this.products.findIndex(product => product.id === id);
-    if (index === -1) {
-      throw new Error('Producto no encontrado');
+      // Crear producto temporal en caché
+      const tempProduct = {
+        id: 'temp_' + Date.now(),
+        id_producto: null,
+        name: productData.name,
+        description: productData.description || '',
+        price: parseFloat(productData.price),
+        category: productData.category,
+        id_tipo: productData.id_tipo,
+        available: productData.available !== false,
+        stock: parseInt(productData.stock) || 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _pending: true
+      };
+
+      // Agregar a caché
+      const cachedProducts = await SyncService.getFromCache('@products_cache') || [];
+      cachedProducts.push(tempProduct);
+      await SyncService.saveToCache('@products_cache', cachedProducts);
+
+      return tempProduct;
     }
 
-    this.products[index] = {
-      ...this.products[index],
-      ...productData,
-      price: parseFloat(productData.price),
-      stock: parseInt(productData.stock),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      // Si hay conexión, crear normalmente
+      let id_tipo = productData.id_tipo;
+      
+      if (!id_tipo) {
+        const { data: tipo } = await supabase
+          .from('tipo_producto')
+          .select('id_tipo')
+          .eq('descripcion', productData.category)
+          .single();
 
-    await this.saveProducts();
-    return this.products[index];
+        id_tipo = tipo?.id_tipo;
+
+        if (!id_tipo) {
+          const { data: newTipo } = await supabase
+            .from('tipo_producto')
+            .insert({ descripcion: productData.category })
+            .select()
+            .single();
+          
+          id_tipo = newTipo.id_tipo;
+        }
+      }
+
+      const { data: producto, error: errorProducto } = await supabase
+        .from('productos')
+        .insert({
+          nombre: productData.name,
+          descripcion: productData.description || '',
+          id_tipo_producto: id_tipo,
+        })
+        .select()
+        .single();
+
+      if (errorProducto) throw errorProducto;
+
+      const { data: menu, error: errorMenu } = await supabase
+        .from('menu')
+        .insert({
+          id_producto: producto.id_producto,
+          precio: parseFloat(productData.price),
+          disponibilidad: productData.available !== false,
+        })
+        .select()
+        .single();
+
+      if (errorMenu) throw errorMenu;
+
+      return await this.getById(menu.id_menu);
+    } catch (error) {
+      console.error('Error al crear producto:', error);
+      throw error;
+    }
   }
 
-  async delete(id) {
-    await this.loadProducts();
-    
-    const initialLength = this.products.length;
-    this.products = this.products.filter(product => product.id !== id);
-    
-    if (this.products.length === initialLength) {
-      throw new Error('Producto no encontrado');
+  // ==================== ACTUALIZAR PRODUCTO ====================
+  
+  async update(id_menu, productData) {
+    const isOnline = await SyncService.isOnline();
+
+    if (!isOnline) {
+      console.log('📴 Sin conexión, guardando operación pendiente');
+      
+      await SyncService.addPendingOperation({
+        type: 'update',
+        id: id_menu,
+        data: productData
+      });
+
+      // Actualizar en caché
+      const cachedProducts = await SyncService.getFromCache('@products_cache') || [];
+      const index = cachedProducts.findIndex(p => p.id === id_menu.toString());
+      
+      if (index !== -1) {
+        cachedProducts[index] = {
+          ...cachedProducts[index],
+          ...productData,
+          price: parseFloat(productData.price),
+          stock: parseInt(productData.stock) || 0,
+          updatedAt: new Date().toISOString(),
+          _pending: true
+        };
+        await SyncService.saveToCache('@products_cache', cachedProducts);
+        return cachedProducts[index];
+      }
+
+      return null;
     }
 
-    await this.saveProducts();
-    return true;
+    try {
+      const currentProduct = await this.getById(id_menu);
+      if (!currentProduct) {
+        throw new Error('Producto no encontrado');
+      }
+
+      const id_producto = currentProduct.id_producto;
+
+      let id_tipo = productData.id_tipo || currentProduct.id_tipo;
+      if (productData.category && productData.category !== currentProduct.category) {
+        const { data: tipo } = await supabase
+          .from('tipo_producto')
+          .select('id_tipo')
+          .eq('descripcion', productData.category)
+          .single();
+
+        id_tipo = tipo?.id_tipo;
+
+        if (!id_tipo) {
+          const { data: newTipo } = await supabase
+            .from('tipo_producto')
+            .insert({ descripcion: productData.category })
+            .select()
+            .single();
+          
+          id_tipo = newTipo.id_tipo;
+        }
+      }
+
+      const { error: errorProducto } = await supabase
+        .from('productos')
+        .update({
+          nombre: productData.name,
+          descripcion: productData.description || '',
+          id_tipo_producto: id_tipo,
+        })
+        .eq('id_producto', id_producto);
+
+      if (errorProducto) throw errorProducto;
+
+      const { error: errorMenu } = await supabase
+        .from('menu')
+        .update({
+          precio: parseFloat(productData.price),
+          disponibilidad: productData.available,
+        })
+        .eq('id_menu', id_menu);
+
+      if (errorMenu) throw errorMenu;
+
+      return await this.getById(id_menu);
+    } catch (error) {
+      console.error('Error al actualizar producto:', error);
+      throw error;
+    }
   }
 
-  async search(query) {
-    await this.loadProducts();
-    
-    if (!query) return this.products;
+  // ==================== ELIMINAR PRODUCTO ====================
+  
+  async delete(id_menu) {
+    const isOnline = await SyncService.isOnline();
 
-    const lowerQuery = query.toLowerCase();
-    return this.products.filter(product =>
-      product.name.toLowerCase().includes(lowerQuery) ||
-      product.category.toLowerCase().includes(lowerQuery) ||
-      product.description.toLowerCase().includes(lowerQuery)
-    );
+    if (!isOnline) {
+      console.log('📴 Sin conexión, guardando operación pendiente');
+      
+      await SyncService.addPendingOperation({
+        type: 'delete',
+        id: id_menu
+      });
+
+      // Eliminar de caché
+      const cachedProducts = await SyncService.getFromCache('@products_cache') || [];
+      const filtered = cachedProducts.filter(p => p.id !== id_menu.toString());
+      await SyncService.saveToCache('@products_cache', filtered);
+
+      return true;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('menu')
+        .delete()
+        .eq('id_menu', id_menu);
+
+      if (error) throw error;
+
+      return true;
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+      throw error;
+    }
   }
 
-  async filterByCategory(category) {
-    await this.loadProducts();
-    
-    if (!category || category === 'Todos') return this.products;
-    
-    return this.products.filter(product => product.category === category);
-  }
-
+  // ==================== CATEGORÍAS ====================
+  
   async getCategories() {
-    await this.loadProducts();
-    
-    const categories = ['Todos', ...new Set(this.products.map(p => p.category))];
-    return categories;
+    try {
+      return await SyncService.syncCategories();
+    } catch (error) {
+      console.error('Error al obtener categorías:', error);
+      return ['Todos'];
+    }
   }
 
-  async clearAll() {
-    this.products = [];
-    await this.saveProducts();
-    return true;
+  async getCategoriesWithId() {
+    const isOnline = await SyncService.isOnline();
+    
+    if (!isOnline) {
+      return await SyncService.getFromCache('@categories_with_id_cache') || [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('tipo_producto')
+        .select('id_tipo, descripcion')
+        .order('descripcion', { ascending: true });
+
+      if (error) throw error;
+
+      await SyncService.saveToCache('@categories_with_id_cache', data);
+      return data || [];
+    } catch (error) {
+      console.error('Error al obtener categorías con ID:', error);
+      return await SyncService.getFromCache('@categories_with_id_cache') || [];
+    }
   }
 }
 

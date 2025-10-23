@@ -12,8 +12,11 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import { supabase } from '../config/supabase';
 import ProductController from '../controllers/ProductController';
+import SyncService from '../services/SyncService';
 import { productStyles as styles, colors } from '../styles/ProductStyles';
 
 const ProductsMenuTab = () => {
@@ -26,6 +29,8 @@ const ProductsMenuTab = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -38,18 +43,37 @@ const ProductsMenuTab = () => {
   const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
+    console.log('🟢 ProductsMenuTab montado');
     loadProducts();
     loadCategories();
+    checkConnection();
   }, []);
 
   useEffect(() => {
     filterProducts();
   }, [searchQuery, selectedCategory, products]);
 
+  const checkConnection = async () => {
+    const online = await SyncService.isOnline();
+    setIsOnline(online);
+  };
+
   const loadProducts = async () => {
-    const result = await ProductController.getAllProducts();
-    if (result.success) {
-      setProducts(result.data);
+    console.log('🔵 Cargando productos...');
+    setLoading(true);
+    try {
+      const result = await ProductController.getAllProducts();
+      console.log('📊 Resultado:', result);
+      
+      if (result.success) {
+        console.log('✅ Productos:', result.data.length);
+        setProducts(result.data);
+      }
+    } catch (error) {
+      console.error('💥 Error:', error);
+      Alert.alert('Error', 'No se pudieron cargar los productos');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,7 +84,7 @@ const ProductsMenuTab = () => {
     }
   };
 
-  const filterProducts = async () => {
+  const filterProducts = () => {
     let filtered = [...products];
 
     if (selectedCategory !== 'Todos') {
@@ -71,7 +95,7 @@ const ProductsMenuTab = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(p =>
         p.name.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query)) ||
         p.category.toLowerCase().includes(query)
       );
     }
@@ -96,36 +120,45 @@ const ProductsMenuTab = () => {
   const openEditModal = (product) => {
     setEditingProduct(product);
     setFormData({
-      name: product.name,
-      description: product.description,
-      price: product.price.toString(),
-      category: product.category,
-      stock: product.stock.toString(),
-      available: product.available,
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price != null ? product.price.toString() : '',
+      category: product.category || '',
+      stock: product.stock != null ? product.stock.toString() : '0',
+      available: product.available !== false,
     });
     setFormErrors({});
     setModalVisible(true);
   };
 
   const saveProduct = async () => {
-    let result;
-
-    if (editingProduct) {
-      result = await ProductController.updateProduct(editingProduct.id, formData);
-    } else {
-      result = await ProductController.createProduct(formData);
-    }
-
-    if (result.success) {
-      setModalVisible(false);
-      await loadProducts();
-      await loadCategories();
-      Alert.alert('Éxito', result.message);
-    } else {
-      if (result.errors) {
-        setFormErrors(result.errors);
+    console.log('💾 Guardando producto...');
+    setLoading(true);
+    
+    try {
+      let result;
+      if (editingProduct) {
+        result = await ProductController.updateProduct(editingProduct.id, formData);
+      } else {
+        result = await ProductController.createProduct(formData);
       }
-      Alert.alert('Error', result.message);
+
+      if (result.success) {
+        setModalVisible(false);
+        await loadProducts();
+        await loadCategories();
+        Alert.alert('Éxito', result.message);
+      } else {
+        if (result.errors) {
+          setFormErrors(result.errors);
+        }
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      console.error('💥 Error:', error);
+      Alert.alert('Error', 'Ocurrió un error al guardar');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,10 +170,12 @@ const ProductsMenuTab = () => {
   const deleteProduct = async () => {
     if (!productToDelete) return;
 
+    setLoading(true);
     const result = await ProductController.deleteProduct(productToDelete.id);
     
     setDeleteModalVisible(false);
     setProductToDelete(null);
+    setLoading(false);
 
     if (result.success) {
       await loadProducts();
@@ -158,6 +193,31 @@ const ProductsMenuTab = () => {
     }
   };
 
+  const testConnection = async () => {
+    Alert.alert('Testeando...', 'Verificando conexión...');
+    
+    try {
+      const startTime = Date.now();
+      const { data, error } = await supabase
+        .from('tipo_producto')
+        .select('count')
+        .limit(1);
+      
+      const duration = Date.now() - startTime;
+      
+      if (error) {
+        Alert.alert('Error ❌', `No conectado\n\n${error.message}`);
+        setIsOnline(false);
+      } else {
+        Alert.alert('Éxito ✅', `Conectado\n\nTiempo: ${duration}ms`);
+        setIsOnline(true);
+      }
+    } catch (err) {
+      Alert.alert('Error de Red', err.message);
+      setIsOnline(false);
+    }
+  };
+
   const renderProductItem = ({ item }) => (
     <View style={styles.productCard}>
       <View style={styles.productHeader}>
@@ -169,6 +229,9 @@ const ProductsMenuTab = () => {
               {item.description}
             </Text>
           ) : null}
+          {item._pending && (
+            <Text style={styles.pendingBadge}>⏳ Pendiente de sincronizar</Text>
+          )}
         </View>
         <TouchableOpacity
           style={[
@@ -224,8 +287,27 @@ const ProductsMenuTab = () => {
     </View>
   );
 
+  if (loading && products.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Cargando productos...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Status Bar */}
+      <View style={styles.statusBar}>
+        <View style={[styles.statusIndicator, { backgroundColor: isOnline ? '#10B981' : '#EF4444' }]}>
+          <Text style={styles.statusText}>
+            {isOnline ? '🌐 En línea' : '📴 Sin conexión'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Header */}
       <View style={[styles.header, { paddingTop: 20 }]}>
         <View style={styles.searchContainer}>
           <TextInput
@@ -235,6 +317,12 @@ const ProductsMenuTab = () => {
             onChangeText={setSearchQuery}
           />
           <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: 'orange', marginRight: 8 }]}
+            onPress={testConnection}
+          >
+            <Text style={styles.addButtonText}>📡</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.addButton}
             onPress={openCreateModal}
           >
@@ -243,6 +331,7 @@ const ProductsMenuTab = () => {
         </View>
       </View>
 
+      {/* Categories */}
       <View style={styles.categoriesContainer}>
         <ScrollView
           horizontal
@@ -271,6 +360,7 @@ const ProductsMenuTab = () => {
         </ScrollView>
       </View>
 
+      {/* Products List */}
       <FlatList
         data={filteredProducts}
         renderItem={renderProductItem}
@@ -279,6 +369,7 @@ const ProductsMenuTab = () => {
         ListEmptyComponent={renderEmptyState}
       />
 
+      {/* Modal de Formulario */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -352,18 +443,12 @@ const ProductsMenuTab = () => {
                 <View style={styles.formColumn}>
                   <Text style={styles.formLabel}>Stock</Text>
                   <TextInput
-                    style={[
-                      styles.formInput,
-                      formErrors.stock && styles.formInputError
-                    ]}
+                    style={styles.formInput}
                     placeholder="0"
                     value={formData.stock}
                     onChangeText={(text) => setFormData({ ...formData, stock: text })}
                     keyboardType="number-pad"
                   />
-                  {formErrors.stock && (
-                    <Text style={styles.formError}>{formErrors.stock}</Text>
-                  )}
                 </View>
               </View>
 
@@ -393,18 +478,24 @@ const ProductsMenuTab = () => {
                 <TouchableOpacity
                   style={[styles.formButton, styles.cancelButton]}
                   onPress={() => setModalVisible(false)}
+                  disabled={loading}
                 >
                   <Text style={[styles.formButtonText, styles.cancelButtonText]}>
                     Cancelar
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.formButton, styles.saveButton]}
+                  style={[styles.formButton, styles.saveButton, loading && styles.saveButtonDisabled]}
                   onPress={saveProduct}
+                  disabled={loading}
                 >
-                  <Text style={[styles.formButtonText, styles.saveButtonText]}>
-                    {editingProduct ? 'Actualizar' : 'Crear'}
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={[styles.formButtonText, styles.saveButtonText]}>
+                      {editingProduct ? 'Actualizar' : 'Crear'}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -412,6 +503,7 @@ const ProductsMenuTab = () => {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Modal de Confirmación */}
       <Modal
         visible={deleteModalVisible}
         animationType="fade"
@@ -429,6 +521,7 @@ const ProductsMenuTab = () => {
               <TouchableOpacity
                 style={[styles.formButton, styles.cancelButton]}
                 onPress={() => setDeleteModalVisible(false)}
+                disabled={loading}
               >
                 <Text style={[styles.formButtonText, styles.cancelButtonText]}>
                   Cancelar
@@ -437,10 +530,15 @@ const ProductsMenuTab = () => {
               <TouchableOpacity
                 style={[styles.formButton, { backgroundColor: colors.error }]}
                 onPress={deleteProduct}
+                disabled={loading}
               >
-                <Text style={[styles.formButtonText, styles.saveButtonText]}>
-                  Eliminar
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={[styles.formButtonText, styles.saveButtonText]}>
+                    Eliminar
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

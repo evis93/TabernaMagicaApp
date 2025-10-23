@@ -20,7 +20,7 @@
       "package": "com.tavernamagica.app"
     },
     "web": {
-      "favicon": "./assets/images/logo.png"
+      "favicon": "./assets/logo.png"
     }
   }
 }

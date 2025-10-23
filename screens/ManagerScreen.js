@@ -5,53 +5,61 @@ import {
   Text,
   TouchableOpacity,
   SafeAreaView,
+  Alert,
+  Image,
 } from 'react-native';
-import { styles } from './styles/styles';
-import ProductsMenuTab from './ProductsMenuTab'; // ← USA ESTE
-import SalesTab from './Manager/SalesView';
-const ManagerScreen = ({ navigation, route }) => {
-  const { user } = route.params;
+import ProductsMenuTab from './ProductsMenuTab';
+import { managerStyles as styles } from '../styles/ManagerStyles';
+
+const ManagerScreen = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('menu');
-  
-  const [sales] = useState([
-    { id: 1, table: 3, waiter: 'mozo1', total: 4500, timestamp: new Date().toISOString() },
-    { id: 2, table: 7, waiter: 'mozo1', total: 3600, timestamp: new Date().toISOString() },
-    { id: 3, table: 1, waiter: 'mozo2', total: 2800, timestamp: new Date().toISOString() },
-  ]);
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que deseas salir?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Salir', onPress: onLogout, style: 'destructive' },
+      ]
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.appContainer}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTitle}>
-          <Text style={styles.headerIcon}>👨‍🍳</Text>
-          <View>
-            <Text style={styles.headerTitleText}>Panel de Encargado</Text>
-            <Text style={styles.headerSubtitle}>{user.username}</Text>
+        <View style={styles.headerLeft}>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>A Taberna Mágica</Text>
+            <Text style={styles.headerSubtitle}>
+              Bienvenido, {user?.name || user?.username}
+            </Text>
           </View>
         </View>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Login')}
-          style={styles.logoutButton}
-        >
-          <Text style={styles.logoutButtonText}>🚪 Salir</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Salir</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.tabBar}>
         <TouchableOpacity
+          style={[styles.tab, activeTab === 'menu' && styles.tabActive]}
           onPress={() => setActiveTab('menu')}
-          style={[styles.tab, activeTab === 'menu' && styles.activeTab]}
         >
-          <Text style={[styles.tabText, activeTab === 'menu' && styles.activeTabText]}>
+          <Text style={[styles.tabText, activeTab === 'menu' && styles.tabTextActive]}>
             📋 Menú
           </Text>
         </TouchableOpacity>
-        
         <TouchableOpacity
-          onPress={() => setActiveTab('sales')}
-          style={[styles.tab, activeTab === 'sales' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'ventas' && styles.tabActive]}
+          onPress={() => setActiveTab('ventas')}
         >
-          <Text style={[styles.tabText, activeTab === 'sales' && styles.activeTabText]}>
+          <Text style={[styles.tabText, activeTab === 'ventas' && styles.tabTextActive]}>
             💰 Ventas
           </Text>
         </TouchableOpacity>
@@ -59,9 +67,13 @@ const ManagerScreen = ({ navigation, route }) => {
 
       <View style={styles.content}>
         {activeTab === 'menu' ? (
-          <ProductsMenuTab />  
+          <ProductsMenuTab />
         ) : (
-          <SalesTab sales={sales} />
+          <View style={styles.comingSoon}>
+            <Text style={styles.comingSoonText}>💰</Text>
+            <Text style={styles.comingSoonTitle}>Ventas</Text>
+            <Text style={styles.comingSoonSubtitle}>Próximamente...</Text>
+          </View>
         )}
       </View>
     </SafeAreaView>

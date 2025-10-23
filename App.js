@@ -1,13 +1,27 @@
 // App.js
-import React from 'react';
-import { StatusBar } from 'react-native';
-import ProductsScreen from './screens/ProductsScreen';
+import React, { useState } from 'react';
+import LoginScreen from './screens/LoginScreen';
+import ManagerScreen from './screens/ManagerScreen';
 
 export default function App() {
-  return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor="#E87722" />
-      <ProductsScreen />
-    </>
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const handleLogin = (userData) => {
+    console.log('✅ Login exitoso:', userData);
+    setCurrentUser(userData);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    console.log('👋 Logout');
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+  };
+
+  if (!isLoggedIn) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  return <ManagerScreen user={currentUser} onLogout={handleLogout} />;
 }

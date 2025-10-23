@@ -381,6 +381,141 @@ export const productStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  pickerInput: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pickerText: {
+    fontSize: 16,
+    color: colors.text,
+    flex: 1,
+  },
+  pickerArrow: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginLeft: 8,
+  },
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pickerModalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  pickerModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  pickerModalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerModalCloseText: {
+    fontSize: 24,
+    color: colors.text,
+    lineHeight: 24,
+  },
+  pickerModalList: {
+    padding: 8,
+  },
+  pickerModalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  pickerModalItemActive: {
+    backgroundColor: colors.primary + '15',
+  },
+  pickerModalItemText: {
+    fontSize: 16,
+    color: colors.text,
+  },
+  pickerModalItemTextActive: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  pickerModalItemCheck: {
+    fontSize: 18,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  // ============ ESTILOS DE ESTADO ONLINE/OFFLINE ============
+  statusBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pendingIndicator: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  pendingText: {
+    color: '#92400E',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  syncTime: {
+    fontSize: 11,
+    color: colors.textLight,
+  },
+  syncButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  syncButtonText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });
 
 export { colors };
