@@ -19,6 +19,18 @@ const LoginScreen = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Auto-completar contraseña para pruebas
+  const handleUsernameChange = (text) => {
+    setUsername(text);
+    const lowerText = text.toLowerCase();
+
+    if (lowerText === 'mozo' || lowerText === 'encargado' || lowerText === 'enc') {
+      setPassword('123');
+    } else if (text === '') {
+      setPassword('');
+    }
+  };
+
   const handleLogin = async () => {
     console.log('🔐 Intentando login...');
     setLoading(true);
@@ -62,8 +74,7 @@ const LoginScreen = ({ onLogin }) => {
               resizeMode="contain"
             />
           )}
-          
-          <Text style={styles.title}>A Taberna Mágica</Text>
+
           <Text style={styles.subtitle}>Sistema de Gestión</Text>
         </View>
 
@@ -73,7 +84,7 @@ const LoginScreen = ({ onLogin }) => {
             style={styles.input}
             placeholder="Ingresa tu usuario"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={handleUsernameChange}
             autoCapitalize="none"
             autoCorrect={false}
             editable={!loading}
@@ -107,8 +118,8 @@ const LoginScreen = ({ onLogin }) => {
 
         <View style={styles.testUsers}>
           <Text style={styles.testTitle}>👤 Usuarios de prueba:</Text>
-          <Text style={styles.testUser}>• encargado / enc123</Text>
-          <Text style={styles.testUser}>• mozo / mozo123</Text>
+          <Text style={styles.testUser}>• enc / 123</Text>
+          <Text style={styles.testUser}>• mozo / 123</Text>
         </View>
       </View>
     </KeyboardAvoidingView>

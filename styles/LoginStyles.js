@@ -33,7 +33,7 @@ export const loginStyles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 40,
   },
   logo: {
     width: 120,
@@ -48,10 +48,11 @@ export const loginStyles = StyleSheet.create({
     marginBottom: 5,
   },
   subtitle: {
-    fontSize: 16,
-    color: colors.textLight,
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
     textAlign: 'center',
-    marginBottom: 30,
+    marginTop: 5,
   },
   inputGroup: {
     marginBottom: 20,

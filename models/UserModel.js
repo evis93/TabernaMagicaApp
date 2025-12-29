@@ -57,13 +57,16 @@ class UserModel {
 
       const perfil = perfiles && perfiles.length > 0 ? perfiles[0] : null;
 
+      const profileName = perfil ? perfil.perfil : 'Usuario';
+
       return {
         success: true,
         data: {
           id: usuario.id_usr,
           username: usuario.username,
-          profile: perfil ? perfil.perfil : 'Usuario',
+          profile: profileName,
           profileId: usuario.id_perfil,
+          role: profileName.toLowerCase() === 'mozo' ? 'waiter' : 'manager'
         }
       };
 

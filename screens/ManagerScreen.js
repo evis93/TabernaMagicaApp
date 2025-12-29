@@ -1,5 +1,5 @@
 // screens/ManagerScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,55 @@ import {
   SafeAreaView,
   Alert,
   Image,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import ProductsMenuTab from './ProductsMenuTab';
+import TableController from '../controllers/TableController';
 import { managerStyles as styles } from '../styles/ManagerStyles';
 
 const ManagerScreen = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('menu');
+  const [salesSummary, setSalesSummary] = useState(null);
+  const [loadingSales, setLoadingSales] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'ventas') {
+      loadSalesSummary();
+    }
+  }, [activeTab]);
+
+  const loadSalesSummary = async () => {
+    setLoadingSales(true);
+    const result = await TableController.getSalesSummary();
+    if (result.success) {
+      setSalesSummary(result.data);
+    }
+    setLoadingSales(false);
+  };
+
+  const handleClearSales = () => {
+    Alert.alert(
+      'Limpiar Historial',
+      '¿Estás seguro de que deseas eliminar todo el historial de ventas? Esta acción no se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await TableController.clearSalesHistory();
+            if (result.success) {
+              Alert.alert('Éxito', result.message);
+              loadSalesSummary();
+            } else {
+              Alert.alert('Error', result.message);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -35,9 +78,8 @@ const ManagerScreen = ({ user, onLogout }) => {
             resizeMode="contain"
           />
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>A Taberna Mágica</Text>
             <Text style={styles.headerSubtitle}>
-              Bienvenido, {user?.name || user?.username}
+              Encargado: {user?.name || user?.username}
             </Text>
           </View>
         </View>
@@ -69,11 +111,49 @@ const ManagerScreen = ({ user, onLogout }) => {
         {activeTab === 'menu' ? (
           <ProductsMenuTab />
         ) : (
-          <View style={styles.comingSoon}>
-            <Text style={styles.comingSoonText}>💰</Text>
-            <Text style={styles.comingSoonTitle}>Ventas</Text>
-            <Text style={styles.comingSoonSubtitle}>Próximamente...</Text>
-          </View>
+          <ScrollView style={styles.salesContainer}>
+            {loadingSales ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#8B5CF6" />
+                <Text style={styles.loadingText}>Cargando ventas...</Text>
+              </View>
+            ) : !salesSummary || salesSummary.salesCount === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateIcon}>💰</Text>
+                <Text style={styles.emptyStateText}>No hay ventas registradas</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Las ventas aparecerán aquí cuando los mozos cierren mesas
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.salesContent}>
+                {/* Resumen General */}
+                <View style={styles.summaryCard}>
+                  <Text style={styles.summaryTitle}>Resumen General</Text>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Total vendido:</Text>
+                    <Text style={styles.summaryValueMain}>
+                      {TableController.formatPrice(salesSummary.totalSalesWithoutCommission)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Comisión (10%):</Text>
+                    <Text style={styles.summaryValueCommission}>
+                      {TableController.formatPrice(salesSummary.totalCommission)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Botón para limpiar historial */}
+                <TouchableOpacity
+                  style={styles.clearHistoryButton}
+                  onPress={handleClearSales}
+                >
+                  <Text style={styles.clearHistoryButtonText}>🗑️ Limpiar Historial</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
         )}
       </View>
     </SafeAreaView>

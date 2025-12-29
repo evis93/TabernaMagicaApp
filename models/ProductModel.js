@@ -40,6 +40,7 @@ class ProductModel {
           id_menu,
           precio,
           disponibilidad,
+          stock,
           updated_at,
           productos (
             id_producto,
@@ -66,7 +67,7 @@ class ProductModel {
         category: data.productos.tipo_producto.descripcion,
         id_tipo: data.productos.tipo_producto.id_tipo,
         available: data.disponibilidad,
-        stock: 0,
+        stock: parseInt(data.stock) || 0,
         createdAt: data.productos.created_at,
         updatedAt: data.updated_at,
       };
@@ -156,6 +157,7 @@ class ProductModel {
           id_producto: producto.id_producto,
           precio: parseFloat(productData.price),
           disponibilidad: productData.available !== false,
+          stock: parseInt(productData.stock) || 0,
         })
         .select()
         .single();
@@ -248,6 +250,7 @@ class ProductModel {
         .update({
           precio: parseFloat(productData.price),
           disponibilidad: productData.available,
+          stock: parseInt(productData.stock) || 0,
         })
         .eq('id_menu', id_menu);
 

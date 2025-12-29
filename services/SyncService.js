@@ -131,6 +131,7 @@ class SyncService {
           id_menu,
           precio,
           disponibilidad,
+          stock,
           updated_at,
           productos (
             id_producto,
@@ -156,7 +157,7 @@ class SyncService {
         category: item.productos.tipo_producto.descripcion,
         id_tipo: item.productos.tipo_producto.id_tipo,
         available: item.disponibilidad,
-        stock: 0,
+        stock: parseInt(item.stock) || 0,
         createdAt: item.productos.created_at,
         updatedAt: item.updated_at,
       }));
@@ -296,6 +297,7 @@ class SyncService {
           id_producto: producto.id_producto,
           precio: parseFloat(productData.price),
           disponibilidad: productData.available !== false,
+          stock: parseInt(productData.stock) || 0,
         });
 
       if (errorMenu) throw errorMenu;
@@ -335,6 +337,7 @@ class SyncService {
         .update({
           precio: parseFloat(productData.price),
           disponibilidad: productData.available,
+          stock: parseInt(productData.stock) || 0,
         })
         .eq('id_menu', id_menu);
 

@@ -168,14 +168,19 @@ export const productStyles = StyleSheet.create({
   },
   productActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   editButton: {
     backgroundColor: colors.secondary,
@@ -185,25 +190,31 @@ export const productStyles = StyleSheet.create({
   },
   actionButtonText: {
     color: colors.white,
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
-  
+
   // Badge de disponibilidad
   availabilityBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    minWidth: 85,
+    alignItems: 'center',
   },
   availableBadge: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.success + '20',
+    borderWidth: 1,
+    borderColor: colors.success,
   },
   unavailableBadge: {
-    backgroundColor: colors.danger,
+    backgroundColor: colors.danger + '20',
+    borderWidth: 1,
+    borderColor: colors.danger,
   },
   availabilityText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   // Modal de formulario
@@ -312,9 +323,11 @@ export const productStyles = StyleSheet.create({
   formButton: {
     flex: 1,
     paddingVertical: 15,
+    paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 120,
   },
   cancelButton: {
     backgroundColor: colors.lightGray,
@@ -363,6 +376,10 @@ export const productStyles = StyleSheet.create({
     borderRadius: 20,
     padding: 25,
     elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   deleteModalTitle: {
     fontSize: 20,
@@ -376,6 +393,7 @@ export const productStyles = StyleSheet.create({
     color: colors.textLight,
     textAlign: 'center',
     marginBottom: 25,
+    lineHeight: 22,
   },
   deleteModalButtons: {
     flexDirection: 'row',

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import LoginScreen from './screens/LoginScreen';
 import ManagerScreen from './screens/ManagerScreen';
+import WaiterScreen from './screens/WaiterScreen';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -21,6 +22,11 @@ export default function App() {
 
   if (!isLoggedIn) {
     return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  // Diferenciar entre mozo y encargado
+  if (currentUser?.role === 'waiter') {
+    return <WaiterScreen user={currentUser} onLogout={handleLogout} />;
   }
 
   return <ManagerScreen user={currentUser} onLogout={handleLogout} />;

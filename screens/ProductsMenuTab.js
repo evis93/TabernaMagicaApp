@@ -262,13 +262,13 @@ const ProductsMenuTab = () => {
             style={[styles.actionButton, styles.editButton]}
             onPress={() => openEditModal(item)}
           >
-            <Text style={styles.actionButtonText}>✏️</Text>
+            <Text style={styles.actionButtonText}>✎</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => confirmDelete(item)}
           >
-            <Text style={styles.actionButtonText}>🗑️</Text>
+            <Text style={styles.actionButtonText}>✕</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -519,7 +519,7 @@ const ProductsMenuTab = () => {
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
-                style={[styles.formButton, styles.cancelButton]}
+                style={[styles.formButton, styles.cancelButton, { marginRight: 5 }]}
                 onPress={() => setDeleteModalVisible(false)}
                 disabled={loading}
               >
@@ -528,7 +528,7 @@ const ProductsMenuTab = () => {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.formButton, { backgroundColor: colors.error }]}
+                style={[styles.formButton, { backgroundColor: colors.error, marginLeft: 5 }]}
                 onPress={deleteProduct}
                 disabled={loading}
               >

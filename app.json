@@ -1,11 +1,16 @@
 {
   "expo": {
-    "name": "A Taberna Mágica",
+    "name": "Sistema de Gestión",
     "slug": "taverna-magica",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#E87722",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E87722"
+    },
     "platforms": [
       "ios",
       "android",
@@ -17,10 +22,19 @@
     },
     "android": {
       "backgroundColor": "#E87722",
-      "package": "com.tavernamagica.app"
+      "package": "com.tavernamagica.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#E87722"
+      }
     },
     "web": {
       "favicon": "./assets/logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "616389e5-b94d-4a3b-8495-f7a01f59c47c"
+      }
     }
   }
 }
